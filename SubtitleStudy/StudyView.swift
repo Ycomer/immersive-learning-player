@@ -71,7 +71,8 @@ struct StudyView: View {
     @AppStorage("qwenAlignerModel") private var qwenAlignerModel = LocalToolDefaults.qwenConfiguration["aligner"] ?? ""
     private var currentCue: SubtitleCue? { model.cues.first { $0.id == model.displayID } }
 
-    var body: some View {
+    // Separate opaque views keep SwiftUI type checking bounded on older toolchains.
+    private var playerSurface: some View {
         GeometryReader { geometry in
             let width = min(geometry.size.width, geometry.size.height * model.videoAspect)
             let height = width / model.videoAspect
@@ -79,77 +80,10 @@ struct StudyView: View {
             let dockControlsAtTop = coverBurnedSubtitles && regionBottom > geometry.size.height - 140
             ZStack {
                 Color.black
-                if model.videoURL != nil {
-                    ZStack(alignment: .topLeading) {
-                        NativePlayerView(player: model.player)
-                        Color.clear.contentShape(Rectangle())
-                            .onTapGesture(count: 2) { window?.toggleFullScreen(nil) }
-                            .onTapGesture { model.togglePlay(); revealChrome() }
-                            .allowsHitTesting(!editingCover)
-                        if coverBurnedSubtitles {
-                            coverOverlay(in: CGSize(width: width, height: height))
-                        } else if subtitlesVisible, let cue = currentCue {
-                            VStack { Spacer(); captions(cue, width: width).padding(.horizontal, 32).padding(.bottom, 32) }
-                        }
-                    }.frame(width: width, height: height).coordinateSpace(name: "movie")
-                } else { emptyState }
-                if !editingCover {
-                VStack(spacing: 0) {
-                    topBar.onHover { hovering in topBarHovered = hovering; if hovering { revealChrome() } else { scheduleHide() } }
-                        .padding(.top, 12).padding(.horizontal, 22).padding(.bottom, 28)
-                        .background(LinearGradient(colors: [.black.opacity(0.75), .clear], startPoint: .top, endPoint: .bottom))
-                    Spacer()
-                }
-                .opacity(chromeVisible || model.videoURL == nil ? 1 : 0)
-                .allowsHitTesting(chromeVisible || model.videoURL == nil)
-                .animation(.easeInOut(duration: 0.2), value: chromeVisible)
-                if model.videoURL != nil {
-                    floatingControls(in: geometry.size, defaultAtTop: dockControlsAtTop)
-                        .opacity(chromeVisible ? 1 : 0).allowsHitTesting(chromeVisible)
-                        .animation(.easeInOut(duration: 0.2), value: chromeVisible)
-                }
-                } else {
-                    VStack {
-                        HStack(spacing: 16) {
-                            Label("拖动区域移动 · 拖动四角缩放", systemImage: "move.3d").font(.callout)
-                            Spacer()
-                            Button("重置") { resetCover() }
-                            Button("完成") { finishCoverEditing() }.buttonStyle(.borderedProminent)
-                        }.padding(16).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 24).padding(.top, 46)
-                        Spacer()
-                    }
-                }
-                if !editingCover && model.waitingForSubtitles {
-                    VStack {
-                        Spacer()
-                        HStack(spacing: 12) {
-                            let failed = model.subtitleWaitReason == .original ? model.subtitlePreparationFailed : model.translationFailed
-                            if !failed { ProgressView().controlSize(.small) }
-                            Text(model.waitingMessage).font(.caption).lineLimit(2)
-                            if failed && model.subtitleWaitReason == .original { Button("重试识别", action: model.transcribe) }
-                            else if failed { Button("重试翻译", action: model.translateCurrent) }
-                            Button("取消等待", action: model.pausePlayback)
-                            Button("不等待字幕") { model.waitForSubtitles = false }
-                        }.padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                            .padding(.horizontal, 24).padding(.bottom, 140)
-                    }
-                }
-                if !editingCover && !model.waitingForSubtitles && model.videoURL != nil && !model.busy && (model.subtitlePreparationFailed || model.translationFailed) {
-                    VStack {
-                        Spacer()
-                        HStack(spacing: 12) {
-                            Text(model.translationFailed ? (model.translationError ?? model.status) : model.subtitlePreparationFailed ? model.status : "正在准备当前位置的原文字幕…")
-                                .font(.caption).foregroundStyle(.white.opacity(0.85)).lineLimit(2)
-                            if model.subtitlePreparationFailed {
-                                Button("重新生成", action: model.transcribe)
-                                SettingsLink { Text("模型设置") }
-                            } else if model.translationFailed {
-                                Button("重试翻译", action: model.translateCurrent)
-                            }
-                        }.buttonStyle(.plain).padding(.horizontal, 28)
-                            .padding(.bottom, chromeVisible ? 145 : 40)
-                    }
-                }
+                movieLayer(width: width, height: height)
+                playbackChrome(in: geometry.size, defaultAtTop: dockControlsAtTop)
+                subtitleWaitingOverlay
+                subtitleFailureOverlay
             }
             .coordinateSpace(name: "playerWindow")
             .background(WindowProbe { window = $0 })
@@ -158,14 +92,26 @@ struct StudyView: View {
                 else { scheduleHide() }
             }
         }
+    }
+
+    private var playbackLifecycle: some View {
+        playerSurface
         .ignoresSafeArea().background(.black).tint(accent)
         .onAppear { revealChrome() }
         .onChange(of: model.playRequested) { _, _ in revealChrome() }
         .onChange(of: model.videoURL) { _, _ in revealChrome() }
+    }
+
+    private var recognitionLifecycle: some View {
+        playbackLifecycle
         .onChange(of: recognitionModel) { _, _ in model.reloadRecognitionConfiguration() }
         .onChange(of: recognitionEngine) { _, _ in model.reloadRecognitionConfiguration() }
         .onChange(of: qwenASRModel) { _, _ in model.reloadRecognitionConfiguration() }
         .onChange(of: qwenAlignerModel) { _, _ in model.reloadRecognitionConfiguration() }
+    }
+
+    private var presentationLifecycle: some View {
+        recognitionLifecycle
         .onChange(of: showTranscript) { _, _ in revealChrome() }
         .onChange(of: showControlAppearance) { _, _ in revealChrome() }
         .onChange(of: showCoverSettings) { _, _ in revealChrome() }
@@ -174,36 +120,131 @@ struct StudyView: View {
         .onChange(of: studyingCue) { _, _ in revealChrome() }
         .onExitCommand { if editingCover { finishCoverEditing() } }
         .onDisappear { chrome.cancel() }
+    }
+
+    var body: some View {
+        presentationLifecycle
         .alert("需要处理", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
             Button("好") { model.error = nil }
         } message: { Text(model.error ?? "") }
         .sheet(isPresented: $showTranscript) { transcript }
-        .sheet(isPresented: $showCoverSettings) {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack { Text("原字幕遮挡区域").font(.headline); Spacer(); Button("关闭") { showCoverSettings = false } }
-                Toggle("遮挡视频画面内的原字幕", isOn: $coverBurnedSubtitles)
-                Text("这是播放时的遮挡，不会修改视频，也不能恢复原字幕覆盖的画面。关闭新字幕时，遮挡仍保留。").font(.caption).foregroundStyle(.secondary)
-                Text("遮挡高度：\(Int(coverHeight * 100))%")
-                Slider(value: $coverHeight, in: 0.08...1)
-                Text("水平宽度：\(Int(coverWidth * 100))%")
-                Slider(value: $coverWidth, in: 0.18...1)
-                Text("水平位置：\(Int(coverLeft * 100))%")
-                Slider(value: $coverLeft, in: 0...max(0.001, 1-coverWidth))
-                Text("距画面底部：\(Int(coverBottom * 100))%")
-                Slider(value: $coverBottom, in: 0...max(0.001, 1-coverHeight))
-                Button("恢复底部默认区域") { resetCover() }
-                Text("通过右上角字幕菜单切换遮挡，可以对照原画面校正区域。调整的是视频区域，窗口和全屏会同步缩放。").font(.caption).foregroundStyle(.secondary)
-            }.padding(24).frame(width: 520)
-        }
-        .sheet(isPresented: $showLog) {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack { Text("任务日志").font(.headline); Spacer(); Button("关闭") { showLog = false } }
-                ScrollView { Text(model.taskLog.isEmpty ? model.status : model.taskLog).font(.system(size: 12, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
-            }.padding(24).frame(width: 650, height: 400)
-        }
+        .sheet(isPresented: $showCoverSettings) { coverSettingsSheet }
+        .sheet(isPresented: $showLog) { taskLogSheet }
         .sheet(item: $editing) { cue in
             SubtitleEditor(cue: cue, onSave: { text in model.edit(cue.id, text: text); editing = nil; model.translateCurrent() }, onCancel: { editing = nil })
         }
+    }
+
+    @ViewBuilder
+    private func movieLayer(width: CGFloat, height: CGFloat) -> some View {
+        if model.videoURL != nil {
+            ZStack(alignment: .topLeading) {
+                NativePlayerView(player: model.player)
+                Color.clear.contentShape(Rectangle())
+                    .onTapGesture(count: 2) { window?.toggleFullScreen(nil) }
+                    .onTapGesture { model.togglePlay(); revealChrome() }
+                    .allowsHitTesting(!editingCover)
+                if coverBurnedSubtitles {
+                    coverOverlay(in: CGSize(width: width, height: height))
+                } else if subtitlesVisible, let cue = currentCue {
+                    VStack { Spacer(); captions(cue, width: width).padding(.horizontal, 32).padding(.bottom, 32) }
+                }
+            }.frame(width: width, height: height).coordinateSpace(name: "movie")
+        } else { emptyState }
+    }
+
+    @ViewBuilder
+    private func playbackChrome(in viewport: CGSize, defaultAtTop: Bool) -> some View {
+        if !editingCover {
+            VStack(spacing: 0) {
+                topBar.onHover { hovering in topBarHovered = hovering; if hovering { revealChrome() } else { scheduleHide() } }
+                    .padding(.top, 12).padding(.horizontal, 22).padding(.bottom, 28)
+                    .background(LinearGradient(colors: [.black.opacity(0.75), .clear], startPoint: .top, endPoint: .bottom))
+                Spacer()
+            }
+            .opacity(chromeVisible || model.videoURL == nil ? 1 : 0)
+            .allowsHitTesting(chromeVisible || model.videoURL == nil)
+            .animation(.easeInOut(duration: 0.2), value: chromeVisible)
+            if model.videoURL != nil {
+                floatingControls(in: viewport, defaultAtTop: defaultAtTop)
+                    .opacity(chromeVisible ? 1 : 0).allowsHitTesting(chromeVisible)
+                    .animation(.easeInOut(duration: 0.2), value: chromeVisible)
+            }
+        } else {
+            VStack {
+                HStack(spacing: 16) {
+                    Label("拖动区域移动 · 拖动四角缩放", systemImage: "move.3d").font(.callout)
+                    Spacer()
+                    Button("重置") { resetCover() }
+                    Button("完成") { finishCoverEditing() }.buttonStyle(.borderedProminent)
+                }.padding(16).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12)).padding(.horizontal, 24).padding(.top, 46)
+                Spacer()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var subtitleWaitingOverlay: some View {
+        if !editingCover && model.waitingForSubtitles {
+            VStack {
+                Spacer()
+                HStack(spacing: 12) {
+                    let failed = model.subtitleWaitReason == .original ? model.subtitlePreparationFailed : model.translationFailed
+                    if !failed { ProgressView().controlSize(.small) }
+                    Text(model.waitingMessage).font(.caption).lineLimit(2)
+                    if failed && model.subtitleWaitReason == .original { Button("重试识别", action: model.transcribe) }
+                    else if failed { Button("重试翻译", action: model.translateCurrent) }
+                    Button("取消等待", action: model.pausePlayback)
+                    Button("不等待字幕") { model.waitForSubtitles = false }
+                }.padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 24).padding(.bottom, 140)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var subtitleFailureOverlay: some View {
+        if !editingCover && !model.waitingForSubtitles && model.videoURL != nil && !model.busy && (model.subtitlePreparationFailed || model.translationFailed) {
+            VStack {
+                Spacer()
+                HStack(spacing: 12) {
+                    Text(model.translationFailed ? (model.translationError ?? model.status) : model.subtitlePreparationFailed ? model.status : "正在准备当前位置的原文字幕…")
+                        .font(.caption).foregroundStyle(.white.opacity(0.85)).lineLimit(2)
+                    if model.subtitlePreparationFailed {
+                        Button("重新生成", action: model.transcribe)
+                        SettingsLink { Text("模型设置") }
+                    } else if model.translationFailed {
+                        Button("重试翻译", action: model.translateCurrent)
+                    }
+                }.buttonStyle(.plain).padding(.horizontal, 28)
+                    .padding(.bottom, chromeVisible ? 145 : 40)
+            }
+        }
+    }
+
+    private var coverSettingsSheet: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack { Text("原字幕遮挡区域").font(.headline); Spacer(); Button("关闭") { showCoverSettings = false } }
+            Toggle("遮挡视频画面内的原字幕", isOn: $coverBurnedSubtitles)
+            Text("这是播放时的遮挡，不会修改视频，也不能恢复原字幕覆盖的画面。关闭新字幕时，遮挡仍保留。").font(.caption).foregroundStyle(.secondary)
+            Text("遮挡高度：\(Int(coverHeight * 100))%")
+            Slider(value: $coverHeight, in: 0.08...1)
+            Text("水平宽度：\(Int(coverWidth * 100))%")
+            Slider(value: $coverWidth, in: 0.18...1)
+            Text("水平位置：\(Int(coverLeft * 100))%")
+            Slider(value: $coverLeft, in: 0...max(0.001, 1-coverWidth))
+            Text("距画面底部：\(Int(coverBottom * 100))%")
+            Slider(value: $coverBottom, in: 0...max(0.001, 1-coverHeight))
+            Button("恢复底部默认区域") { resetCover() }
+            Text("通过右上角字幕菜单切换遮挡，可以对照原画面校正区域。调整的是视频区域，窗口和全屏会同步缩放。").font(.caption).foregroundStyle(.secondary)
+        }.padding(24).frame(width: 520)
+    }
+
+    private var taskLogSheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack { Text("任务日志").font(.headline); Spacer(); Button("关闭") { showLog = false } }
+            ScrollView { Text(model.taskLog.isEmpty ? model.status : model.taskLog).font(.system(size: 12, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
+        }.padding(24).frame(width: 650, height: 400)
     }
 
     private func floatingControls(in viewport: CGSize, defaultAtTop: Bool) -> some View {
