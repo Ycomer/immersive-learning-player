@@ -1,0 +1,27 @@
+// !$*UTF8*$!
+{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {
+00000000000000000000000A = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubtitleStudyApp.swift; sourceTree = "<group>"; };
+00000000000000000000001E = {isa = PBXBuildFile; fileRef = 00000000000000000000000A; };
+00000000000000000000000B = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyView.swift; sourceTree = "<group>"; };
+00000000000000000000001F = {isa = PBXBuildFile; fileRef = 00000000000000000000000B; };
+00000000000000000000000C = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyModel.swift; sourceTree = "<group>"; };
+000000000000000000000020 = {isa = PBXBuildFile; fileRef = 00000000000000000000000C; };
+00000000000000000000000D = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Subtitle.swift; sourceTree = "<group>"; };
+000000000000000000000021 = {isa = PBXBuildFile; fileRef = 00000000000000000000000D; };
+00000000000000000000000E = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalServices.swift; sourceTree = "<group>"; };
+000000000000000000000022 = {isa = PBXBuildFile; fileRef = 00000000000000000000000E; };
+000000000000000000000001 = {isa = PBXProject; attributes = { LastUpgradeCheck = 2650; }; buildConfigurationList = 000000000000000000000007; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; knownRegions = (en, Base); mainGroup = 000000000000000000000002; productRefGroup = 000000000000000000000004; projectDirPath = ""; projectRoot = ""; targets = (000000000000000000000005); };
+000000000000000000000002 = {isa = PBXGroup; children = (000000000000000000000003,000000000000000000000004); sourceTree = "<group>"; };
+000000000000000000000003 = {isa = PBXGroup; children = (00000000000000000000000A,00000000000000000000000B,00000000000000000000000C,00000000000000000000000D,00000000000000000000000E); path = SubtitleStudy; sourceTree = "<group>"; };
+000000000000000000000004 = {isa = PBXGroup; children = (000000000000000000000006); name = Products; sourceTree = "<group>"; };
+000000000000000000000006 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Immersive Learning Player.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+000000000000000000000005 = {isa = PBXNativeTarget; buildConfigurationList = 000000000000000000000008; buildPhases = (000000000000000000000009,000000000000000000000050); buildRules = (); dependencies = (); name = SubtitleStudy; productName = "Immersive Learning Player"; productReference = 000000000000000000000006; productType = "com.apple.product-type.application"; };
+000000000000000000000009 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (00000000000000000000001E,00000000000000000000001F,000000000000000000000020,000000000000000000000021,000000000000000000000022); runOnlyForDeploymentPostprocessing = 0; };
+000000000000000000000007 = {isa = XCConfigurationList; buildConfigurations = (000000000000000000000040,000000000000000000000041); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+000000000000000000000008 = {isa = XCConfigurationList; buildConfigurations = (000000000000000000000042,000000000000000000000043); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+000000000000000000000040 = {isa = XCBuildConfiguration; name = Debug; buildSettings = { SDKROOT = macosx; MACOSX_DEPLOYMENT_TARGET = 14.0; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; }; };
+000000000000000000000041 = {isa = XCBuildConfiguration; name = Release; buildSettings = { SDKROOT = macosx; MACOSX_DEPLOYMENT_TARGET = 14.0; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; }; };
+000000000000000000000042 = {isa = XCBuildConfiguration; name = Debug; buildSettings = { PRODUCT_BUNDLE_IDENTIFIER = com.local.SubtitleStudy; PRODUCT_NAME = "Immersive Learning Player"; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_FILE = SubtitleStudy/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "Immersive Learning Player"; INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education"; INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking = YES; CODE_SIGN_STYLE = Automatic; CODE_SIGN_IDENTITY = "-"; ENABLE_APP_SANDBOX = NO; ENABLE_HARDENED_RUNTIME = YES; ENABLE_USER_SCRIPT_SANDBOXING = NO; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; }; };
+000000000000000000000043 = {isa = XCBuildConfiguration; name = Release; buildSettings = { PRODUCT_BUNDLE_IDENTIFIER = com.local.SubtitleStudy; PRODUCT_NAME = "Immersive Learning Player"; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_FILE = SubtitleStudy/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "Immersive Learning Player"; INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education"; INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking = YES; CODE_SIGN_STYLE = Automatic; CODE_SIGN_IDENTITY = "-"; ENABLE_APP_SANDBOX = NO; ENABLE_HARDENED_RUNTIME = YES; ENABLE_USER_SCRIPT_SANDBOXING = NO; SWIFT_EMIT_LOC_STRINGS = YES; }; };
+000000000000000000000050 = {isa = PBXShellScriptBuildPhase; buildActionMask = 2147483647; files = (); inputPaths = (); outputPaths = (); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "sh \"$SRCROOT/scripts/bundle-tools.sh\""; alwaysOutOfDate = 1; };
+}; rootObject = 000000000000000000000001; }

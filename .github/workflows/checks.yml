@@ -1,0 +1,17 @@
+name: macOS checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  source-checks:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install playback fixture dependency
+        run: brew install ffmpeg
+      - name: Run checks and build without model downloads
+        run: sh scripts/check.sh

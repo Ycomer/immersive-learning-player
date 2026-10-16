@@ -1,0 +1,8 @@
+# Direct dependency versions used by the local Apple Silicon ASR runtime.
+# Transitive dependencies are resolved by pip; this is not a complete lockfile.
+mlx-audio[stt]==0.5.9
+mlx==0.32.3
+transformers==5.19.0
+numpy==2.5.4
+soundfile==0.14.0
+sentencepiece==0.2.2
