@@ -31,11 +31,16 @@ import AVFoundation
         model.tick(model.duration)
         model.togglePlay()
         try check(model.currentTime == 0, "Play at media end restarts video")
-        model.player.pause(); model.playing = false
+        model.pausePlayback()
         model.offset = 0
         model.select(model.cues[2], play: false); model.toggleLoop()
         NotificationCenter.default.post(name: .AVPlayerItemDidPlayToEndTime, object: model.player.currentItem)
-        try await Task.sleep(nanoseconds: 100_000_000)
+        // Seeking and decoder startup are asynchronous on a fresh CI host.
+        // Observe the required loop state instead of assuming a 100 ms startup.
+        for _ in 0..<200 {
+            if model.repeatSentence && model.playing && model.currentTime >= 6 { break }
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
         try check(model.repeatSentence && model.playing && model.currentTime >= 6, "Final cue can loop when subtitle extends beyond media")
         model.player.pause()
         print("PASS: real media duration, overlapping cues, gaps, offset, cached edits and final-cue looping")
