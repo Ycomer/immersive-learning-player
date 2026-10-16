@@ -6,3 +6,6 @@ transformers==5.19.0
 numpy==2.5.4
 soundfile==0.14.0
 sentencepiece==0.2.2
+# ForcedAligner loads these language tokenizers on demand.
+nagisa==0.3.0
+soynlp==0.0.493

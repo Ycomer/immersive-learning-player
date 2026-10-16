@@ -22,6 +22,8 @@ python3 scripts/download-qwen-asr.py --aligner
 
 The setup script creates `tools/mlx-asr-venv`, using the direct dependency versions in `requirements-local-asr.txt`. It does not alter global Python packages. Python 3.14 is the development configuration; other supported Python versions have not been validated here.
 
+Japanese alignment also needs `nagisa`, and Korean alignment needs `soynlp`; both are included explicitly because the aligner imports them lazily. Setup checks these tokenizers without loading ASR weights or downloading models.
+
 The download helper uses pinned MLX community conversions:
 
 | Model | Revision | Local folder |

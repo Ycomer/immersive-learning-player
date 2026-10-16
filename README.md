@@ -33,7 +33,7 @@ The reference development machine is an Apple Silicon Mac with 24 GB unified mem
 
 ## Build and run
 
-Requirements: an Apple Silicon Mac, macOS 14+, Xcode with command-line tools, Python 3.10+ (development runtime: 3.14), FFmpeg, and Ollama for translation.
+Requirements: an Apple Silicon Mac, macOS 14+, Xcode with command-line tools, Python 3.12+ (development runtime: 3.14), FFmpeg, and Ollama for translation.
 
 ```sh
 git clone https://github.com/Ycomer/immersive-learning-player.git

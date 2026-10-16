@@ -692,7 +692,16 @@ final class StudyModel: ObservableObject {
     private func translationSignature(for cue: SubtitleCue, at index: Int? = nil) -> String {
         let context = translationContext(for: cue, at: index)
         let defaults = UserDefaults.standard
-        let profile = [OllamaService.translationRevision, configuredTranslationModel, defaults.string(forKey: "ollamaURL") ?? "http://127.0.0.1:11434", "extra-notes:\(defaults.bool(forKey: "additionalAIStudyNotes"))", "source-unresolved:\((cue.recognitionConfidence ?? 1) < 0.45 && cue.recognitionWarning != nil)", languageName, cue.text, cue.recognitionWarning ?? ""] + context.before + ["<after>"] + context.after
+        let unresolved = (cue.recognitionConfidence ?? 1) < 0.45 && cue.recognitionWarning != nil
+        var profile: [String] = [
+            OllamaService.translationRevision, configuredTranslationModel,
+            defaults.string(forKey: "ollamaURL") ?? "http://127.0.0.1:11434",
+            "extra-notes:\(defaults.bool(forKey: "additionalAIStudyNotes"))",
+            "source-unresolved:\(unresolved)", languageName, cue.text, cue.recognitionWarning ?? ""
+        ]
+        profile.append(contentsOf: context.before)
+        profile.append("<after>")
+        profile.append(contentsOf: context.after)
         let encoded = (try? JSONEncoder().encode(profile)) ?? Data()
         return SHA256.hash(data: encoded).map { String(format: "%02x", $0) }.joined()
     }
